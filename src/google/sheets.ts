@@ -1,6 +1,6 @@
-import { google } from 'googleapis';
+import { google, type sheets_v4 } from 'googleapis';
 
-export async function appendPortfolioRow(values: string[])
+function getSheetsClient(): sheets_v4.Sheets
 {
     const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
     const privateKey = process.env.GOOGLE_PRIVATE_KEY;
@@ -21,10 +21,28 @@ export async function appendPortfolioRow(values: string[])
         ],
     });
 
-    const sheets = google.sheets({
+    return google.sheets({
         version: 'v4',
         auth,
     });
+}
+
+function getSpreadsheetId(): string
+{
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    if (!spreadsheetId)
+    {
+        throw new Error('Google environment variables are missing');
+    }
+
+    return spreadsheetId;
+}
+
+export async function appendPortfolioRow(values: string[])
+{
+    const sheets = getSheetsClient();
+    const spreadsheetId = getSpreadsheetId();
 
     await sheets.spreadsheets.values.append({
         spreadsheetId,
@@ -34,4 +52,17 @@ export async function appendPortfolioRow(values: string[])
             values: [values],
         },
     });
+}
+
+export async function getPortfolioRows(): Promise<string[][]>
+{
+    const sheets = getSheetsClient();
+    const spreadsheetId = getSpreadsheetId();
+
+    const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: 'Sheet1!A:F',
+    });
+
+    return response.data.values ?? [];
 }

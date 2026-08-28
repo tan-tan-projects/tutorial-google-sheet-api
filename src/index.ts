@@ -9,10 +9,7 @@ const server = createServer(async (req, res) =>
     {
         const chunks: Buffer[] = [];
 
-        for await (const chunk of req)
-        {
-            chunks.push(Buffer.from(chunk));
-        }
+        for await (const chunk of req) chunks.push(Buffer.from(chunk));
 
         const rawBody = Buffer.concat(chunks).toString('utf-8');
 
