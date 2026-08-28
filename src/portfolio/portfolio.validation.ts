@@ -1,4 +1,4 @@
-import type { CreatePortfolioInput } from './portfolio.types';
+import type { CreatePortfolioInput } from './portfolio.types.js';
 
 export function validatePortfolioInput(body: unknown):
     | { valid: true; data: CreatePortfolioInput }

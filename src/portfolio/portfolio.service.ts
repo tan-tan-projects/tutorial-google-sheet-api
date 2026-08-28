@@ -1,5 +1,5 @@
-import { appendPortfolioRow } from '../google/sheets';
-import type { CreatePortfolioInput } from './portfolio.types';
+import { appendPortfolioRow } from '../google/sheets.js';
+import type { CreatePortfolioInput } from './portfolio.types.js';
 
 export async function createPortfolio(
     input: CreatePortfolioInput,

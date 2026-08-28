@@ -1,29 +1,37 @@
-import portfolioHandler from '../api/portfolio';
+import { createServer } from 'node:http';
+import portfolioHandler from '../api/portfolio.js';
 
-const server = Bun.serve({
-    port: 3000,
+const server = createServer(async (req, res) =>
+{
+    let body: unknown = undefined;
 
-    async fetch(req)
+    if (req.method === 'POST')
     {
-        const url = new URL(req.url);
+        const chunks: Buffer[] = [];
 
-        if (url.pathname === '/api/portfolio')
+        for await (const chunk of req)
         {
-            return portfolioHandler(req);
+            chunks.push(Buffer.from(chunk));
         }
 
-        return new Response(
-            JSON.stringify({
-                message: 'Bun API is running',
-            }),
-            {
-                status: 200,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            },
-        );
-    },
+        const rawBody = Buffer.concat(chunks).toString('utf-8');
+
+        try
+        {
+            body = JSON.parse(rawBody);
+        }
+        catch
+        {
+            body = undefined;
+        }
+    }
+
+    (req as any).body = body;
+
+    await portfolioHandler(req as any, res as any);
 });
 
-console.log(`Server running at ${server.url}`);
+server.listen(3000, () =>
+{
+    console.log('Server running at http://localhost:3000/');
+});

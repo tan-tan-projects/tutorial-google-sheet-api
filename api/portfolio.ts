@@ -1,13 +1,14 @@
-import { json } from '../src/utils/response';
-import { validatePortfolioInput } from '../src/portfolio/portfolio.validation';
-import { createPortfolio } from '../src/portfolio/portfolio.service';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { json } from '../src/utils/response.js';
+import { validatePortfolioInput } from '../src/portfolio/portfolio.validation.js';
+import { createPortfolio } from '../src/portfolio/portfolio.service.js';
 
-export default async function handler(req: Request)
+export default async function handler(req: VercelRequest, res: VercelResponse)
 {
     // 1. Method validation
     if (req.method !== 'POST')
     {
-        return json({ success: false, error: 'Method Not Allowed' }, 405);
+        return json(res, { success: false, error: 'Method Not Allowed' }, 405);
     }
 
     // 2. Read JSON body
@@ -15,11 +16,11 @@ export default async function handler(req: Request)
 
     try
     {
-        body = await req.json();
+        body = req.body;
     }
     catch
     {
-        return json({ success: false, error: 'Invalid JSON body' }, 400);
+        return json(res, { success: false, error: 'Invalid JSON body' }, 400);
     }
 
     // 3. Validate input
@@ -28,7 +29,7 @@ export default async function handler(req: Request)
     if (!validation.valid)
     {
         console.warn('Portfolio validation failed:', validation.error);
-        return json({ success: false, error: validation.error }, 400);
+        return json(res, { success: false, error: validation.error }, 400);
     }
 
     try
@@ -37,12 +38,12 @@ export default async function handler(req: Request)
         const portfolio = await createPortfolio(validation.data);
 
         // 5. Success response
-        return json({ success: true, data: portfolio }, 201);
+        return json(res, { success: true, data: portfolio }, 201);
     }
     catch (error)
     {
         console.error('Failed to save portfolio', error);
 
-        return json({ success: false, error: 'Failed to save portfolio' }, 500);
+        return json(res, { success: false, error: 'Failed to save portfolio' }, 500);
     }
 }
