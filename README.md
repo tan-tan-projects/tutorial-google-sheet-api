@@ -85,6 +85,18 @@ Example:
 curl http://localhost:3000/api/portfolio
 ```
 
+### Get Portfolios by id
+
+```http
+GET /api/portfolio
+```
+
+Example:
+
+```bash
+curl http://localhost:3000/api/portfolio/:id
+```
+
 ### Create Portfolio
 
 ```http
@@ -108,7 +120,7 @@ Example using a JSON file:
 ```bash
 curl -X POST "http://localhost:3000/api/portfolio" \
   -H "Content-Type: application/json" \
-  --data-binary "@test-payload.json"
+  --data-binary "@test-create-payload.json"
 ```
 
 Successful response:
