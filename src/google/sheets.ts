@@ -1,4 +1,5 @@
 import { google, type sheets_v4 } from 'googleapis';
+import type { Portfolio } from '../portfolio/portfolio.types';
 
 function getSheetsClient(): sheets_v4.Sheets
 {
@@ -65,4 +66,21 @@ export async function getPortfolioRows(): Promise<string[][]>
     });
 
     return response.data.values ?? [];
+}
+
+export async function getPortfolioById(id: string,): Promise<Portfolio | null>
+{
+    const rows = await getPortfolioRows();
+
+    const row = rows.slice(1).find(row => row[0] === id);
+
+    if (!row) return null;
+    return {
+        id: row[0] ?? '',
+        title: row[1] ?? '',
+        description: row[2] ?? '',
+        image: row[3] ?? '',
+        url: row[4] ?? '',
+        created_at: row[5] ?? '',
+    };
 }

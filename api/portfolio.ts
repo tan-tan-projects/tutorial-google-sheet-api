@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { json } from '../src/utils/response.js';
 import { validatePortfolioInput } from '../src/portfolio/portfolio.validation.js';
 import { createPortfolio, getPortfolios } from '../src/portfolio/portfolio.service.js';
+import { getPortfolioById } from '../src/google/sheets.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse)
 {
