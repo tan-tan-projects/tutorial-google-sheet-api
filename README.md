@@ -1,8 +1,8 @@
 # Portfolio API
 
-REST API sederhana untuk mengelola data portfolio menggunakan **Google Sheets sebagai data store** dan **Vercel Functions sebagai serverless API**.
+REST API untuk mengelola data portfolio menggunakan **Google Sheets sebagai data store** dan **Vercel Functions sebagai serverless API**.
 
-API ini dibuat dengan **Bun + TypeScript**, menggunakan **Google Service Account** untuk mengakses Google Sheets.
+API ini dibuat menggunakan **Bun + TypeScript** dan menggunakan **Google Service Account** untuk mengakses Google Sheets.
 
 ---
 
@@ -14,6 +14,9 @@ API ini dibuat dengan **Bun + TypeScript**, menggunakan **Google Service Account
 - ✏️ Update portfolio
 - 🗑️ Delete portfolio
 - ✅ Request validation
+- 🌐 CORS configuration
+- ⚡ Cache-Control untuk GET request
+- 🛡️ Rate limiting menggunakan Vercel Firewall
 - 🔐 Google Service Account authentication
 - ☁️ Serverless deployment menggunakan Vercel
 - 🌱 Separate development dan production environment
@@ -29,6 +32,7 @@ API ini dibuat dengan **Bun + TypeScript**, menggunakan **Google Service Account
 | Vercel Functions       | Serverless API                       |
 | Google Sheets API      | Data storage                         |
 | Google Service Account | Google API authentication            |
+| Vercel Firewall        | Rate limiting                        |
 
 ---
 
@@ -51,15 +55,23 @@ API ini dibuat dengan **Bun + TypeScript**, menggunakan **Google Service Account
 │   │   └── portfolio.validation.ts
 │   │
 │   ├── utils/
+│   │   ├── cache.ts
+│   │   ├── cors.ts
 │   │   └── response.ts
 │   │
 │   └── index.ts
 │
 ├── test-create-payload.json
 ├── test-update-payload.json
+├── .env
+├── .gitignore
+├── LICENSE
 ├── package.json
+├── README.md
 └── tsconfig.json
 ```
+
+> `.env` hanya digunakan untuk local development dan tidak boleh di-commit ke repository.
 
 ### API Routing
 
@@ -71,6 +83,23 @@ GET    /api/portfolio/:id
 PUT    /api/portfolio/:id
 DELETE /api/portfolio/:id
 ```
+
+### Directory Description
+
+| Path                    | Description                                        |
+| ----------------------- | -------------------------------------------------- |
+| `api/`                  | Vercel serverless function entry points            |
+| `api/portfolio.ts`      | Handler untuk `/api/portfolio`                     |
+| `api/portfolio/[id].ts` | Handler untuk `/api/portfolio/:id`                 |
+| `src/google/`           | Google Sheets integration                          |
+| `src/portfolio/`        | Portfolio business logic dan validation            |
+| `src/utils/`            | Shared utilities seperti response, CORS, dan cache |
+| `src/index.ts`          | Local Bun HTTP server                              |
+| `test-*.json`           | JSON payload untuk testing API                     |
+| `.env`                  | Local environment variables                        |
+| `.gitignore`            | Files excluded from Git                            |
+| `LICENSE`               | Project license                                    |
+| `README.md`             | Project documentation                              |
 
 ---
 
@@ -88,13 +117,35 @@ bun install
 
 ## 🔐 Environment Variables
 
-Untuk local development, buat file `.env`:
+Untuk local development, buat file:
+
+```text
+.env
+```
+
+Contoh:
 
 ```env
+CORS_ORIGINS=http://localhost:9000,http://localhost:3000
+CACHE_CONTROL=public, s-maxage=60, stale-while-revalidate=300
 GOOGLE_CLIENT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 GOOGLE_SHEET_ID=
 ```
+
+### Google Service Account
+
+API menggunakan Google Service Account untuk mengakses Google Sheets.
+
+Environment variables yang diperlukan:
+
+| Variable              | Description                        |
+| --------------------- | ---------------------------------- |
+| `GOOGLE_CLIENT_EMAIL` | Email Google Service Account       |
+| `GOOGLE_PRIVATE_KEY`  | Private key Google Service Account |
+| `GOOGLE_SHEET_ID`     | ID target Google Spreadsheet       |
+
+Google Service Account harus memiliki akses **Editor** pada spreadsheet yang digunakan.
 
 ### Google Private Key
 
@@ -104,32 +155,28 @@ GOOGLE_SHEET_ID=
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
-Jangan commit file `.env` ke repository.
-
-### Google Service Account
-
-Google Service Account yang digunakan oleh API harus memiliki akses ke target Google Spreadsheet.
-
-Minimal berikan akses **Editor** pada spreadsheet kepada email:
-
-```text
-GOOGLE_CLIENT_EMAIL
-```
+Jangan commit `.env` ke repository.
 
 ---
 
 ## 📊 Google Sheet Structure
 
-API menggunakan `Sheet1` dengan struktur kolom:
+API menggunakan:
 
-| Column | Field         |
-| ------ | ------------- |
-| A      | `id`          |
-| B      | `title`       |
-| C      | `description` |
-| D      | `image`       |
-| E      | `url`         |
-| F      | `created_at`  |
+```text
+Sheet1
+```
+
+dengan struktur:
+
+| Column | Field         | Description           |
+| ------ | ------------- | --------------------- |
+| A      | `id`          | Portfolio UUID        |
+| B      | `title`       | Portfolio title       |
+| C      | `description` | Portfolio description |
+| D      | `image`       | Portfolio image URL   |
+| E      | `url`         | Portfolio URL         |
+| F      | `created_at`  | Creation timestamp    |
 
 Contoh:
 
@@ -174,6 +221,8 @@ curl http://localhost:3000/api/portfolio
 	]
 }
 ```
+
+Response GET menggunakan `Cache-Control` sesuai konfigurasi environment.
 
 ---
 
@@ -341,7 +390,7 @@ curl -X DELETE "http://localhost:3000/api/portfolio/08ca28fb-7b48-430d-b52f-2808
 }
 ```
 
-Jika ID tidak ditemukan:
+### Not Found
 
 ```json
 {
@@ -390,6 +439,81 @@ Validation mencakup:
 
 ---
 
+# 🌐 CORS
+
+CORS dikonfigurasi melalui environment variable:
+
+```env
+CORS_ORIGINS=http://localhost:9000,http://localhost:3000
+```
+
+Multiple origins dipisahkan menggunakan koma.
+
+Contoh:
+
+```env
+CORS_ORIGINS=http://localhost:9000,https://example.com
+```
+
+API hanya memberikan `Access-Control-Allow-Origin` untuk origin yang terdaftar.
+
+---
+
+# ⚡ Cache
+
+GET portfolio menggunakan cache melalui `Cache-Control`.
+
+Konfigurasi dilakukan melalui:
+
+```env
+CACHE_CONTROL=public, s-maxage=60, stale-while-revalidate=300
+```
+
+Mutation request seperti:
+
+```text
+POST
+PUT
+DELETE
+```
+
+menggunakan:
+
+```text
+Cache-Control: no-store
+```
+
+Dengan konfigurasi default:
+
+```text
+s-maxage=60
+stale-while-revalidate=300
+```
+
+artinya response dapat digunakan oleh cache selama 60 detik dan dapat direvalidasi secara stale hingga 300 detik.
+
+---
+
+# 🛡️ Rate Limiting
+
+Mutation endpoint dilindungi menggunakan **Vercel Firewall Rate Limiting**.
+
+Konfigurasi saat ini:
+
+```text
+15 requests / minute
+```
+
+Rate limit menggunakan kombinasi:
+
+```text
+IP Address + User Agent
+```
+
+Rate limiting diterapkan untuk membatasi request berlebihan pada endpoint yang melakukan perubahan data.
+
+---
+
 # 💻 Local Development
 
 Start development server:
@@ -404,7 +528,7 @@ Server akan berjalan di:
 http://localhost:3000
 ```
 
-Contoh:
+Test API:
 
 ```bash
 curl http://localhost:3000/api/portfolio
@@ -426,27 +550,27 @@ prod → Production
 ### Development Workflow
 
 ```text
-                GitHub
-                   │
-                   ▼
-                dev branch
-                   │
-                   ▼
-          Vercel Preview Deploy
-                   │
-                   ▼
-                Testing
-                   │
-              ┌────┴────┐
-              │         │
-            Fix      Approved
-              │         │
-              └────┬────┘
-                   ▼
-              Merge to prod
-                   │
-                   ▼
-          Vercel Production
+                    GitHub
+                       │
+                       ▼
+                  dev branch
+                       │
+                       ▼
+             Vercel Preview Deploy
+                       │
+                       ▼
+                    Testing
+                       │
+                 ┌─────┴─────┐
+                 │           │
+                Fix       Approved
+                 │           │
+                 └─────┬─────┘
+                       ▼
+                  Merge to prod
+                       │
+                       ▼
+             Vercel Production
 ```
 
 ### Development
@@ -456,11 +580,11 @@ git checkout dev
 git push origin dev
 ```
 
-Setiap push ke `dev` akan menghasilkan **Preview Deployment**.
+Setiap push ke `dev` menghasilkan **Preview Deployment**.
 
 ### Production
 
-Setelah perubahan sudah selesai dan teruji:
+Setelah perubahan selesai dan sudah teruji:
 
 ```text
 dev → prod
@@ -472,30 +596,60 @@ Branch `prod` digunakan untuk **Production Deployment**.
 
 # 🔒 Security
 
-Environment variables berisi credential Google Service Account dan **tidak boleh disimpan di repository**.
+Credential Google Service Account harus disimpan sebagai environment variables.
 
-Pastikan:
+Jangan pernah commit:
 
 ```text
 .env
 ```
 
-sudah masuk `.gitignore`.
+ke repository.
 
-Jangan pernah commit:
+Pastikan `.gitignore` memiliki:
 
 ```text
-GOOGLE_CLIENT_EMAIL
-GOOGLE_PRIVATE_KEY
-GOOGLE_SHEET_ID
+.env
+.env.*
+!.env.example
 ```
 
-ke source code.
-
-Untuk Vercel, environment variables dikonfigurasi melalui project settings Vercel.
+Environment variables untuk deployment production dikonfigurasi melalui Vercel Project Settings.
 
 ---
 
-## 📄 License
+# 📄 License
 
-Private project.
+Project ini menggunakan license yang terdapat pada:
+
+```text
+LICENSE
+```
+
+Silakan lihat file tersebut untuk detail lengkap mengenai hak penggunaan dan distribusi project.
+
+---
+
+## 📌 Project Status
+
+Current version:
+
+```text
+Portfolio API
+├── CRUD              ✅
+├── Validation        ✅
+├── Google Sheets     ✅
+├── CORS              ✅
+├── Cache-Control     ✅
+├── Rate Limiting     ✅
+├── Vercel Preview    ✅
+└── Vercel Production ✅
+```
+
+Planned:
+
+```text
+Media / Image API
+Contact API
+Email Notification
+```
