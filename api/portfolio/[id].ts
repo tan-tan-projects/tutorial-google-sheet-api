@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getPortfolioById } from "../../src/google/sheets";
-import { json } from "../../src/utils/response";
+import { getPortfolioById } from "../../src/google/sheets.js";
+import { json } from "../../src/utils/response.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse)
 {
