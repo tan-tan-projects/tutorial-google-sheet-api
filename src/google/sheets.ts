@@ -81,3 +81,35 @@ export async function updatePortfolioRow(rowNumber: number, values: string[])
         },
     });
 }
+
+export async function deletePortfolioRow(rowNumber: number)
+{
+    const sheets = getSheetsClient();
+    const spreadsheetId = getSpreadsheetId();
+
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties' });
+
+    const sheet = spreadsheet.data.sheets?.find(sheet => sheet.properties?.title === 'Sheet1');
+
+    const sheetId = sheet?.properties?.sheetId;
+
+    if (sheetId === undefined) throw new Error('Sheet1 not found');
+
+    await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+            requests: [
+                {
+                    deleteDimension: {
+                        range: {
+                            sheetId,
+                            dimension: 'ROWS',
+                            startIndex: rowNumber - 1,
+                            endIndex: rowNumber,
+                        },
+                    },
+                },
+            ],
+        },
+    });
+}

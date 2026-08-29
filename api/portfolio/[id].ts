@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getPortfolioById, updatePortfolio } from "../../src/portfolio/portfolio.service.js";
+import { deletePortfolio, getPortfolioById, updatePortfolio } from "../../src/portfolio/portfolio.service.js";
 import { validatePortfolioInput } from "../../src/portfolio/portfolio.validation.js";
 import { json } from "../../src/utils/response.js";
 
@@ -65,6 +65,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse)
             console.error('Failed to update portfolio', error);
 
             return json(res, { success: false, error: 'Failed to update portfolio', }, 500);
+        }
+    }
+
+    // DELETE /api/portfolio/:id
+    if (req.method === 'DELETE')
+    {
+        try
+        {
+            const deleted = await deletePortfolio(id);
+
+            if (!deleted)
+            {
+                return json(res, { success: false, error: 'Portfolio not found' }, 404);
+            }
+
+            return json(res, { success: true, data: { id } });
+        }
+        catch (error)
+        {
+            console.error('Failed to delete portfolio', error);
+
+            return json(res, { success: false, error: 'Failed to delete portfolio' }, 500);
         }
     }
 

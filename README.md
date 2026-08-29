@@ -1,47 +1,94 @@
 # Portfolio API
 
-REST API sederhana untuk mengelola data portfolio menggunakan **Google Sheets** sebagai data store dan **Vercel Functions** sebagai deployment platform.
+REST API sederhana untuk mengelola data portfolio menggunakan **Google Sheets sebagai data store** dan **Vercel Functions sebagai serverless API**.
 
-## Tech Stack
+API ini dibuat dengan **Bun + TypeScript**, menggunakan **Google Service Account** untuk mengakses Google Sheets.
 
-- Bun
-- TypeScript
-- Vercel Functions
-- Google Sheets API
-- Google Service Account
+---
 
-## Project Structure
+## ✨ Features
+
+- 📋 Get seluruh portfolio
+- 🔎 Get portfolio berdasarkan ID
+- ➕ Create portfolio
+- ✏️ Update portfolio
+- 🗑️ Delete portfolio
+- ✅ Request validation
+- 🔐 Google Service Account authentication
+- ☁️ Serverless deployment menggunakan Vercel
+- 🌱 Separate development dan production environment
+
+---
+
+## 🛠️ Tech Stack
+
+| Technology             | Purpose                              |
+| ---------------------- | ------------------------------------ |
+| [Bun](https://bun.com) | JavaScript runtime & package manager |
+| TypeScript             | Type safety                          |
+| Vercel Functions       | Serverless API                       |
+| Google Sheets API      | Data storage                         |
+| Google Service Account | Google API authentication            |
+
+---
+
+## 📁 Project Structure
 
 ```text
 .
 ├── api/
-│   └── portfolio.ts
+│   ├── portfolio.ts
+│   └── portfolio/
+│       └── [id].ts
+│
 ├── src/
 │   ├── google/
 │   │   └── sheets.ts
+│   │
 │   ├── portfolio/
 │   │   ├── portfolio.service.ts
 │   │   ├── portfolio.types.ts
 │   │   └── portfolio.validation.ts
+│   │
 │   ├── utils/
 │   │   └── response.ts
+│   │
 │   └── index.ts
-├── test-payload.json
+│
+├── test-create-payload.json
+├── test-update-payload.json
 ├── package.json
 └── tsconfig.json
 ```
 
-## Installation
+### API Routing
 
-Install dependencies:
+```text
+GET    /api/portfolio
+POST   /api/portfolio
+
+GET    /api/portfolio/:id
+PUT    /api/portfolio/:id
+DELETE /api/portfolio/:id
+```
+
+---
+
+## 🚀 Installation
+
+Clone repository dan install dependencies:
 
 ```bash
+git clone <repository-url>
+cd portfolio-api
 bun install
 ```
 
-## Environment Variables
+---
 
-Create a `.env` file for local development:
+## 🔐 Environment Variables
+
+Untuk local development, buat file `.env`:
 
 ```env
 GOOGLE_CLIENT_EMAIL=
@@ -49,62 +96,144 @@ GOOGLE_PRIVATE_KEY=
 GOOGLE_SHEET_ID=
 ```
 
-`GOOGLE_PRIVATE_KEY` should preserve the escaped newline format:
+### Google Private Key
+
+`GOOGLE_PRIVATE_KEY` harus mempertahankan escaped newline (`\n`):
 
 ```env
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
-The Google Service Account must have access to the target Google Spreadsheet.
+Jangan commit file `.env` ke repository.
 
-## Local Development
+### Google Service Account
 
-Start the development server:
+Google Service Account yang digunakan oleh API harus memiliki akses ke target Google Spreadsheet.
 
-```bash
-bun dev
-```
-
-The API will be available at:
+Minimal berikan akses **Editor** pada spreadsheet kepada email:
 
 ```text
-http://localhost:3000
+GOOGLE_CLIENT_EMAIL
 ```
 
-## API
+---
 
-### Get Portfolios
+## 📊 Google Sheet Structure
+
+API menggunakan `Sheet1` dengan struktur kolom:
+
+| Column | Field         |
+| ------ | ------------- |
+| A      | `id`          |
+| B      | `title`       |
+| C      | `description` |
+| D      | `image`       |
+| E      | `url`         |
+| F      | `created_at`  |
+
+Contoh:
+
+| id   | title        | description           | image       | url         | created_at               |
+| ---- | ------------ | --------------------- | ----------- | ----------- | ------------------------ |
+| UUID | My Portfolio | Portfolio description | https://... | https://... | 2026-08-28T20:44:21.487Z |
+
+Baris pertama digunakan sebagai header.
+
+---
+
+# 📡 API Reference
+
+## Get Portfolios
+
+Mengambil seluruh portfolio.
 
 ```http
 GET /api/portfolio
 ```
 
-Example:
+### Example
 
 ```bash
 curl http://localhost:3000/api/portfolio
 ```
 
-### Get Portfolios by id
+### Response
+
+```json
+{
+	"success": true,
+	"data": [
+		{
+			"id": "08ca28fb-7b48-430d-b52f-2808b4d0375d",
+			"title": "My Portfolio",
+			"description": "Portfolio project description",
+			"image": "https://example.com/image.png",
+			"url": "https://example.com",
+			"created_at": "2026-08-28T20:44:21.487Z"
+		}
+	]
+}
+```
+
+---
+
+## Get Portfolio by ID
+
+Mengambil satu portfolio berdasarkan ID.
 
 ```http
-GET /api/portfolio
+GET /api/portfolio/:id
 ```
 
-Example:
+### Example
 
 ```bash
-curl http://localhost:3000/api/portfolio/:id
+curl http://localhost:3000/api/portfolio/08ca28fb-7b48-430d-b52f-2808b4d0375d
 ```
 
-### Create Portfolio
+### Response
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "08ca28fb-7b48-430d-b52f-2808b4d0375d",
+		"title": "My Portfolio",
+		"description": "Portfolio project description",
+		"image": "https://example.com/image.png",
+		"url": "https://example.com",
+		"created_at": "2026-08-28T20:44:21.487Z"
+	}
+}
+```
+
+### Not Found
+
+```json
+{
+	"success": false,
+	"error": "Portfolio not found"
+}
+```
+
+HTTP status:
+
+```text
+404 Not Found
+```
+
+---
+
+## Create Portfolio
+
+Membuat portfolio baru.
 
 ```http
 POST /api/portfolio
 Content-Type: application/json
 ```
 
-Request body:
+### Request Body
 
 ```json
 {
@@ -115,7 +244,9 @@ Request body:
 }
 ```
 
-Example using a JSON file:
+### Example
+
+Menggunakan JSON file:
 
 ```bash
 curl -X POST "http://localhost:3000/api/portfolio" \
@@ -123,7 +254,7 @@ curl -X POST "http://localhost:3000/api/portfolio" \
   --data-binary "@test-create-payload.json"
 ```
 
-Successful response:
+### Response
 
 ```json
 {
@@ -135,17 +266,120 @@ Successful response:
 }
 ```
 
-## Validation
+---
 
-The create endpoint validates:
+## Update Portfolio
+
+Mengubah portfolio berdasarkan ID.
+
+```http
+PUT /api/portfolio/:id
+Content-Type: application/json
+```
+
+### Request Body
+
+```json
+{
+	"title": "Updated Portfolio",
+	"description": "Updated portfolio description",
+	"image": "https://example.com/new-image.png",
+	"url": "https://example.com"
+}
+```
+
+### Example
+
+```bash
+curl -X PUT "http://localhost:3000/api/portfolio/08ca28fb-7b48-430d-b52f-2808b4d0375d" \
+  -H "Content-Type: application/json" \
+  --data-binary "@test-update-payload.json"
+```
+
+### Response
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "08ca28fb-7b48-430d-b52f-2808b4d0375d",
+		"title": "Updated Portfolio",
+		"description": "Updated portfolio description",
+		"image": "https://example.com/new-image.png",
+		"url": "https://example.com",
+		"created_at": "2026-08-28T20:44:21.487Z"
+	}
+}
+```
+
+> `created_at` tetap mempertahankan nilai sebelumnya ketika portfolio di-update.
+
+---
+
+## Delete Portfolio
+
+Menghapus portfolio berdasarkan ID.
+
+```http
+DELETE /api/portfolio/:id
+```
+
+### Example
+
+```bash
+curl -X DELETE "http://localhost:3000/api/portfolio/08ca28fb-7b48-430d-b52f-2808b4d0375d"
+```
+
+### Response
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "08ca28fb-7b48-430d-b52f-2808b4d0375d"
+	}
+}
+```
+
+Jika ID tidak ditemukan:
+
+```json
+{
+	"success": false,
+	"error": "Portfolio not found"
+}
+```
+
+HTTP status:
+
+```text
+404 Not Found
+```
+
+---
+
+# ✅ Validation
+
+Create dan Update menggunakan validation yang sama.
+
+Validation mencakup:
 
 - Required fields
 - Field types
 - Empty values
-- Image URL
-- Portfolio URL
+- Valid image URL
+- Valid portfolio URL
 
-Example validation response:
+### Required Fields
+
+| Field         | Type   | Required |
+| ------------- | ------ | -------- |
+| `title`       | string | Yes      |
+| `description` | string | Yes      |
+| `image`       | string | Yes      |
+| `url`         | string | Yes      |
+
+### Example Validation Error
 
 ```json
 {
@@ -154,31 +388,114 @@ Example validation response:
 }
 ```
 
-## Deployment
+---
 
-The project is deployed using Vercel.
+# 💻 Local Development
 
-Branches:
+Start development server:
+
+```bash
+bun dev
+```
+
+Server akan berjalan di:
+
+```text
+http://localhost:3000
+```
+
+Contoh:
+
+```bash
+curl http://localhost:3000/api/portfolio
+```
+
+---
+
+# ☁️ Deployment
+
+Project menggunakan **Vercel** untuk deployment.
+
+Branch digunakan untuk memisahkan environment:
 
 ```text
 dev  → Preview
 prod → Production
 ```
 
-Development workflow:
+### Development Workflow
 
 ```text
-git push origin dev
-        ↓
-Vercel Preview Deployment
-        ↓
-Testing
-        ↓
-Merge dev → prod
-        ↓
-Vercel Production
+                GitHub
+                   │
+                   ▼
+                dev branch
+                   │
+                   ▼
+          Vercel Preview Deploy
+                   │
+                   ▼
+                Testing
+                   │
+              ┌────┴────┐
+              │         │
+            Fix      Approved
+              │         │
+              └────┬────┘
+                   ▼
+              Merge to prod
+                   │
+                   ▼
+          Vercel Production
 ```
 
-## License
+### Development
+
+```bash
+git checkout dev
+git push origin dev
+```
+
+Setiap push ke `dev` akan menghasilkan **Preview Deployment**.
+
+### Production
+
+Setelah perubahan sudah selesai dan teruji:
+
+```text
+dev → prod
+```
+
+Branch `prod` digunakan untuk **Production Deployment**.
+
+---
+
+# 🔒 Security
+
+Environment variables berisi credential Google Service Account dan **tidak boleh disimpan di repository**.
+
+Pastikan:
+
+```text
+.env
+```
+
+sudah masuk `.gitignore`.
+
+Jangan pernah commit:
+
+```text
+GOOGLE_CLIENT_EMAIL
+GOOGLE_PRIVATE_KEY
+GOOGLE_SHEET_ID
+```
+
+ke source code.
+
+Untuk Vercel, environment variables dikonfigurasi melalui project settings Vercel.
+
+---
+
+## 📄 License
 
 Private project.

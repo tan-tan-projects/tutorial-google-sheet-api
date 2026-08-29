@@ -1,4 +1,4 @@
-import { appendPortfolioRow, getPortfolioRows, updatePortfolioRow } from '../google/sheets.js';
+import { appendPortfolioRow, deletePortfolioRow, getPortfolioRows, updatePortfolioRow } from '../google/sheets.js';
 import type { CreatePortfolioInput, Portfolio } from './portfolio.types.js';
 
 function mapPortfolioRow(row: string[]): Portfolio
@@ -85,4 +85,19 @@ export async function updatePortfolio(id: string, input: CreatePortfolioInput): 
     ]);
 
     return updatedPortfolio;
+}
+
+export async function deletePortfolio(id: string): Promise<boolean>
+{
+    const rows = await getPortfolioRows();
+
+    const rowIndex = rows.slice(1).findIndex(row => row[0] === id);
+
+    if (rowIndex === -1) return false;
+
+    const rowNumber = rowIndex + 2;
+
+    await deletePortfolioRow(rowNumber);
+
+    return true;
 }
